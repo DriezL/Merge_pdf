@@ -1,51 +1,33 @@
-﻿using iText.Kernel.Pdf;
-using iText.Kernel.Utils;
-using System.Collections.Generic;
-using System.IO;
+﻿using PdfSharpCore.Pdf;
+using PdfSharpCore.Pdf.IO;
 
-namespace MergePDF
+Console.WriteLine("Enter the first pdf file");
+var file1 = Console.ReadLine();
+Console.WriteLine("Enter the second pdf file");
+var file2 = Console.ReadLine();
+
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+using (PdfDocument one = PdfReader.Open(file1, PdfDocumentOpenMode.Import))
+using (PdfDocument two = PdfReader.Open(file2, PdfDocumentOpenMode.Import))
+using (PdfDocument outPdf = new PdfDocument())
 {
-    internal class Program
+    CopyPages(one, outPdf);
+    CopyPages(two, outPdf);
+
+    outPdf.Save(new FileInfo(file1).DirectoryName + "\\" + FilenameOnly(file1) + "_and_" + FilenameOnly(file2));
+}
+
+string FilenameOnly(string fileNameWithExtension)
+{
+    FileInfo b = new FileInfo(fileNameWithExtension);
+    return Path.GetFileNameWithoutExtension(b.FullName);
+}
+
+void CopyPages(PdfDocument from, PdfDocument to)
+{
+    for (int i = 0; i < from.PageCount; i++)
     {
-        static void Main(string[] args)
-        {
-            var manual = File.ReadAllBytes(@"C:\temp\pdf_one.pdf");
-            var receipt = File.ReadAllBytes(@"C:\temp\pdf_two.pdf");
-            var pdfList = new List<byte[]> { manual, receipt };
-            var result = Combine(pdfList);
-            PdfWriter pdfWriter = new PdfWriter(@"c:\temp\together.pdf");
-            pdfWriter.Write(result);
-        }
-
-
-        public static byte[] Combine(IEnumerable<byte[]> pdfs)
-        {
-            using (var writerMemoryStream = new MemoryStream())
-            {
-                using (var writer = new PdfWriter(writerMemoryStream))
-                {
-                    using (var mergedDocument = new PdfDocument(writer))
-                    {
-                        var merger = new PdfMerger(mergedDocument);
-
-                        foreach (var pdfBytes in pdfs)
-                        {
-                            using (var copyFromMemoryStream = new MemoryStream(pdfBytes))
-                            {
-                                using (var reader = new PdfReader(copyFromMemoryStream))
-                                {
-                                    using (var copyFromDocument = new PdfDocument(reader))
-                                    {
-                                        merger.Merge(copyFromDocument, 1, copyFromDocument.GetNumberOfPages());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return writerMemoryStream.ToArray();
-            }
-        }
+        to.AddPage(from.Pages[i]);
     }
 }
